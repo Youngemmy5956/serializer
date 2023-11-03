@@ -341,48 +341,92 @@ abstract class AbstractNormalizer implements NormalizerInterface, DenormalizerIn
             $constructorParameters = $constructor->getParameters();
             $missingConstructorArguments = [];
             $params = [];
+            // foreach ($constructorParameters as $constructorParameter) {
+            //     $paramName = $constructorParameter->name;
+            //     $attributeContext = $this->getAttributeDenormalizationContext($class, $paramName, $context);
+            //     $key = $this->nameConverter ? $this->nameConverter->normalize($paramName, $class, $format, $context) : $paramName;
+
+            //     $allowed = false === $allowedAttributes || \in_array($paramName, $allowedAttributes);
+            //     $ignored = !$this->isAllowedAttribute($class, $paramName, $format, $context);
+            //     if ($constructorParameter->isVariadic()) {
+            //         if ($allowed && !$ignored && (isset($data[$key]) || \array_key_exists($key, $data))) {
+            //             if (!\is_array($data[$key])) {
+            //                 throw new RuntimeException(sprintf('Cannot create an instance of "%s" from serialized data because the variadic parameter "%s" can only accept an array.', $class, $constructorParameter->name));
+            //             }
+
+            //             $variadicParameters = [];
+            //             foreach ($data[$key] as $parameterKey => $parameterData) {
+            //                 $variadicParameters[$parameterKey] = $this->denormalizeParameter($reflectionClass, $constructorParameter, $paramName, $parameterData, $attributeContext, $format);
+            //             }
+
+            //             $params = array_merge($params, $variadicParameters);
+            //             unset($data[$key]);
+            //         }
+            //     } elseif ($allowed && !$ignored && (isset($data[$key]) || \array_key_exists($key, $data))) {
+            //         $parameterData = $data[$key];
+            //         if (null === $parameterData && $constructorParameter->allowsNull()) {
+            //             $params[] = null;
+            //             // Don't run set for a parameter passed to the constructor
+            //             unset($data[$key]);
+            //             continue;
+            //         }
+
+            //         // Don't run set for a parameter passed to the constructor
+            //         try {
+            //             $params[] = $this->denormalizeParameter($reflectionClass, $constructorParameter, $paramName, $parameterData, $attributeContext, $format);
+            //         } catch (NotNormalizableValueException $exception) {
+            //             if (!isset($context['not_normalizable_value_exceptions'])) {
+            //                 throw $exception;
+            //             }
+
+            //             $context['not_normalizable_value_exceptions'][] = $exception;
+            //             $params[] = $parameterData;
+            //         }
+            //         unset($data[$key]);
+
             foreach ($constructorParameters as $constructorParameter) {
-                $paramName = $constructorParameter->name;
-                $attributeContext = $this->getAttributeDenormalizationContext($class, $paramName, $context);
-                $key = $this->nameConverter ? $this->nameConverter->normalize($paramName, $class, $format, $context) : $paramName;
+    $paramName = $constructorParameter->name;
+    $attributeContext = $this->getAttributeDenormalizationContext($class, $paramName, $context);
+    $key = $this->nameConverter ? $this->nameConverter->normalize($paramName, $class, $format, $context) : $paramName;
 
-                $allowed = false === $allowedAttributes || \in_array($paramName, $allowedAttributes);
-                $ignored = !$this->isAllowedAttribute($class, $paramName, $format, $context);
-                if ($constructorParameter->isVariadic()) {
-                    if ($allowed && !$ignored && (isset($data[$key]) || \array_key_exists($key, $data))) {
-                        if (!\is_array($data[$key])) {
-                            throw new RuntimeException(sprintf('Cannot create an instance of "%s" from serialized data because the variadic parameter "%s" can only accept an array.', $class, $constructorParameter->name));
-                        }
+    $allowed = false === $allowedAttributes || \in_array($paramName, $allowedAttributes);
+    $ignored = !$this->isAllowedAttribute($class, $paramName, $format, $context);
+    if ($constructorParameter->isVariadic()) {
+        if ($allowed && !$ignored && (isset($data[$key]) || \array_key_exists($key, $data))) {
+            if (!\is_array($data[$key])) {
+                throw new RuntimeException(sprintf('Cannot create an instance of "%s" from serialized data because the variadic parameter "%s" can only accept an array.', $class, $constructorParameter->name));
+            }
 
-                        $variadicParameters = [];
-                        foreach ($data[$key] as $parameterKey => $parameterData) {
-                            $variadicParameters[$parameterKey] = $this->denormalizeParameter($reflectionClass, $constructorParameter, $paramName, $parameterData, $attributeContext, $format);
-                        }
+            $variadicParameters = [];
+            foreach ($data[$key] as $parameterKey => $parameterData) {
+                $variadicParameters[$parameterKey] = $this->denormalizeParameter($reflectionClass, $constructorParameter, $paramName, $parameterData, $attributeContext, $format);
+            }
 
-                        $params = array_merge($params, $variadicParameters);
-                        unset($data[$key]);
-                    }
-                } elseif ($allowed && !$ignored && (isset($data[$key]) || \array_key_exists($key, $data))) {
-                    $parameterData = $data[$key];
-                    if (null === $parameterData && $constructorParameter->allowsNull()) {
-                        $params[] = null;
-                        // Don't run set for a parameter passed to the constructor
-                        unset($data[$key]);
-                        continue;
-                    }
+            $params[$paramName] = $variadicParameters; // Use $paramName as key
+            unset($data[$key]);
+        }
+    } elseif ($allowed && !$ignored && (isset($data[$key]) || \array_key_exists($key, $data))) {
+        $parameterData = $data[$key];
+        if (null === $parameterData && $constructorParameter->allowsNull()) {
+            $params[$paramName] = null; // Use $paramName as key
+            // Don't run set for a parameter passed to the constructor
+            unset($data[$key]);
+            continue;
+        }
 
-                    // Don't run set for a parameter passed to the constructor
-                    try {
-                        $params[] = $this->denormalizeParameter($reflectionClass, $constructorParameter, $paramName, $parameterData, $attributeContext, $format);
-                    } catch (NotNormalizableValueException $exception) {
-                        if (!isset($context['not_normalizable_value_exceptions'])) {
-                            throw $exception;
-                        }
+        // Don't run set for a parameter passed to the constructor
+        try {
+            $params[$paramName] = $this->denormalizeParameter($reflectionClass, $constructorParameter, $paramName, $parameterData, $attributeContext, $format); // Use $paramName as key
+        } catch (NotNormalizableValueException $exception) {
+            if (!isset($context['not_normalizable_value_exceptions'])) {
+                throw $exception;
+            }
 
-                        $context['not_normalizable_value_exceptions'][] = $exception;
-                        $params[] = $parameterData;
-                    }
-                    unset($data[$key]);
+            $context['not_normalizable_value_exceptions'][] = $exception;
+            $params[$paramName] = $parameterData; // Use $paramName as key
+        }
+        unset($data[$key]);
+    
                 } elseif (\array_key_exists($key, $context[static::DEFAULT_CONSTRUCTOR_ARGUMENTS][$class] ?? [])) {
                     $params[] = $context[static::DEFAULT_CONSTRUCTOR_ARGUMENTS][$class][$key];
                 } elseif (\array_key_exists($key, $this->defaultContext[self::DEFAULT_CONSTRUCTOR_ARGUMENTS][$class] ?? [])) {
